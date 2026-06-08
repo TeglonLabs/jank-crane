@@ -56,9 +56,36 @@ Clojure has no i32/i64 split (all Long/i64), so all of these are correct there.
   comment-skip reads bytes and mis-handles the high bytes (reports an "Unfinished character" literal).
   Comments must be opaque to end-of-line. Likely related to #634 ("[clojure-test-suite] Lexer issues").
 
-## Upstream value (honest)
-- **Finding 2 is the prize** — a silent integer-correctness divergence from Clojure, unreported,
-  3-line repro. Maintainer (jeaye) explicitly invites bug reports; pre-alpha; high value, low controversy.
-- **Finding 1** — solid bug (segfault vs catchable error, shallow threshold); loopify is one mitigation.
-- **Finding 3** — confirmed (valid UTF-8 `e2 80 94` in a comment; ASCII control passes). Filable; minor severity.
-- Nothing filed yet — these are repros ready for your go/no-go under the `bmorphism` identity.
+## Counterfactual audit (−1: steelman "not a bug", then test)
+
+**F1 — "native languages segfault on stack overflow; this is expected, not a bug." → COUNTERFACTUAL
+LARGELY HOLDS.** C/C++/Rust all abort/segfault on native stack exhaustion; Clojure-on-JVM also cannot do
+unbounded non-tail recursion (it throws SOE). jank compiles to native, so SIGSEGV on a full native stack
+is *expected behavior*, not incorrect. Residuals: (a) catchable-vs-uncatchable is inherent to native
+compilation (a feature request — guard pages/signal handler — not a correctness bug); (b) the ~500–800
+threshold is shallow, hinting at heavy per-call frames (mild perf concern, not a bug).
+⇒ **DOWNGRADE: F1 is not really a bug. loopify is an ENHANCEMENT (issue #98), not a bug fix. Don't file
+as a bug.**
+
+**F2 — "`small_integer` (i32) + no-promotion is intended C++ semantics." → COUNTERFACTUAL REFUTED; bug
+CONFIRMED and root-localized.** Source evidence that jank *intends* non-wrapping integers:
+- `core/math.cpp` `promoting_add/sub/mul` use `__builtin_*_overflow` and promote to `big_integer`
+  (math.cpp:57/92/127) — correct by construction.
+- `clojure/core.jank` has `*'` (promoting) at :1769; `unchecked-multiply` is `(throw "TODO: port …")`
+  at :1886 — i.e. the wrapping op isn't even implemented; you can't have opted into it.
+- Yet `(* 100000 100000)`, `(let …)`, AND `(apply * [100000 100000])` ALL give `1410065408` — so plain
+  `*` on `small_integer` operands wraps at i32, **bypassing jank's own correct `promoting_mul`**. Clojure
+  never wraps at i32 (all i64). ⇒ **CONFIRMED BUG — and stronger than first stated: it's a fast-path /
+  binding defect that routes around the runtime's correct promoting arithmetic. THE prize. File it.**
+
+**F3 — "jank is ASCII-only by design." → COUNTERFACTUAL REFUTED.** `(println "a—b")`→`a—b` and `(def π 3)`
+work — UTF-8 is fine in strings and symbols, only comments choke. Real (minor) comment-lexer bug.
+Secondary: `(count "—")`→`3` (bytes, not chars; Clojure=1) — a separate minor divergence.
+
+## Upstream value (post-audit, honest)
+- **File F2** — confirmed, root-localized, unreported, severe (silent sign-flips); maintainer invites it.
+- **Do NOT file F1 as a bug** — it's expected native behavior; reframe loopify as an opt-in enhancement
+  under #98 if pursued at all.
+- **F3 optional** — real but minor; file with the `count` byte-vs-char note or fold into #634.
+- Nothing filed yet — your go/no-go under `bmorphism`. The −1 pass changed the recommendation: the honest
+  contribution narrowed from "three bugs" to **one strong bug (F2)** + one minor (F3), and an enhancement.
