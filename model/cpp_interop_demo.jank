@@ -1,0 +1,5 @@
+;; minimal cpp-interop on real jank: inject C++, call it, use the result.
+(cpp/raw "namespace demo { long add1(long x){ return x + 1; } }")
+(let* [r (cpp/demo.add1 (cpp/long 41))]
+  (println "cpp add1(41) =" r)
+  (println "interop works? " (= r 42)))
