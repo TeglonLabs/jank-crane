@@ -1,0 +1,16 @@
+name = "jc-converge"
+trit = 0  # witness — contact manifold of jank(+1) and crane(-1)
+kernel = "K2"
+
+# Two source pipelines, one converged IR (the contact manifold M):
+#   crane: Gallina -> MiniML -> MiniCpp -> C++(unique_ptr, rc.h, persistent_array.h) -> native
+#   jank:  Clojure -> analyze -> jank-IR -> LLVM-IR -> C++ runtime(immer, RC) -> native
+
+[roots]
+plus  = "j+c   jank-first generative graft   (Play   +1)"
+minus = "c+j   crane-first verified-RC pullback (Coplay -1)"
+q     = "?     orchestrator / GF(3) witness   (Witness 0)"
+
+[comparisons]
+crane_dafny = "Bloomberg/Crane vs Dafny verification and backend approaches"
+coqgym_place = "Princeton CoqGym as proof-search/data layer upstream of Crane"
