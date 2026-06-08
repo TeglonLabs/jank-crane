@@ -52,4 +52,16 @@ we're prototyping, but the crash-vs-throw gap is the bug.)
 
 ---
 
-## Finding 3 (lexer unicode-in-comment) — NOT drafted; verify clean ASCII/UTF-8 repro first.
+## DRAFT C — lexer errors on valid UTF-8 inside a line comment (minor)
+
+**Title:** Lexer rejects valid UTF-8 (e.g. U+2014 em-dash) inside a `;` line comment
+
+**Body:**
+```clojure
+(println 1)  ; plain ascii — fine
+(println 2)  ; em dash —            ; <- errors: lex/invalid-unicode "Unfinished character"
+```
+A line comment containing a valid multibyte UTF-8 char (em-dash `—`, bytes `e2 80 94`) raises
+`lex/invalid-unicode "Unfinished character"`. ASCII-only comments are fine. Comments should be opaque to
+end-of-line regardless of byte content. Likely related to #634.
+**Env:** jank-0.1-alpha, aarch64-darwin.

@@ -45,17 +45,20 @@ Clojure has no i32/i64 split (all Long/i64), so all of these are correct there.
 - The fix space is clear: either promote `small_integer`→`integer` on overflow (Clojure-like), or make
   the arithmetic ops always i64 (drop the i32 fast path). A maintainer can pick; the repro pins the cause.
 
-## Finding 3 — lexer rejects non-ASCII in a comment (minor, lower confidence)
+## Finding 3 — lexer errors on valid UTF-8 in a line comment (CONFIRMED)
 ```clojure
-(println 1)   ; em-dash —  <- this comment triggers: error lex/invalid-unicode "Unfinished character"
+(println 1)  ; plain ascii comment              => prints 1, rc=0   OK
+(println 2)  ; comment with an em dash —         => prints 2, THEN  error: lex/invalid-unicode
+             ;                                        "Unfinished character"
 ```
-- A U+2014 in a `;` comment produced `lex/invalid-unicode / Unfinished character`. Comments should be
-  opaque to the lexer. May relate to #634 ("[clojure-test-suite] Lexer issues"). Low confidence (could
-  be file-encoding); needs a clean ASCII-vs-UTF8 repro before filing.
+- The em-dash is **`e2 80 94`** = valid UTF-8 for U+2014 (verified with `xxd`). ASCII-only control passes;
+  the UTF-8 comment errors → **confirmed lexer bug**, not a file-encoding artifact. The lexer's
+  comment-skip reads bytes and mis-handles the high bytes (reports an "Unfinished character" literal).
+  Comments must be opaque to end-of-line. Likely related to #634 ("[clojure-test-suite] Lexer issues").
 
 ## Upstream value (honest)
 - **Finding 2 is the prize** — a silent integer-correctness divergence from Clojure, unreported,
   3-line repro. Maintainer (jeaye) explicitly invites bug reports; pre-alpha; high value, low controversy.
 - **Finding 1** — solid bug (segfault vs catchable error, shallow threshold); loopify is one mitigation.
-- **Finding 3** — verify encoding first; file only if it reproduces from a clean ASCII source + UTF-8 comment.
+- **Finding 3** — confirmed (valid UTF-8 `e2 80 94` in a comment; ASCII control passes). Filable; minor severity.
 - Nothing filed yet — these are repros ready for your go/no-go under the `bmorphism` identity.
