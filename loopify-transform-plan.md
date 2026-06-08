@@ -52,3 +52,20 @@ the AST-construction API, then implement steps 1–3 of the tail case with the e
 RED today : -Oloopify run skip-deep-non-tail-recursion.jank  → still segfaults (transform is identity)
 GREEN goal: same → prints the value, no crash, suite still green with flag on AND off
 ```
+
+## Tractability assessment (read the analyze-pass infra, 2026-06-08)
+- `analyze/pass/optimize.cpp` (the entry point) is where a loopify pass would hook; it's tiny and the AST
+  is "modified in place."
+- BUT `analyze/pass/walk.hpp` is **visitor-only**: `postwalk`/`prewalk` take `void(expression_ref)` — they
+  walk for side-effects, they don't return a rewritten tree. So the tail rewrite must **mutate exprs in
+  place** and **construct new `let(loop_with_recur)` + `recur` nodes by hand** (with `local_frame`, binding
+  setup, position propagation, and a custom tail-position walk that tracks position — which `postwalk`
+  does not).
+- ⇒ This is a **deep, multi-day compiler feature**, not a loop-tick task. A wrong version *silently
+  miscompiles* (worse than the current loud segfault). It needs deliberate work by someone fluent in
+  jank's analyze internals (ideally coordinated with the maintainers), with the red test as the gate.
+
+## Recommendation
+**Do not implement the transform via autonomous rebuild-gated loop ticks.** The scaffold is complete and
+verified; the transform is cleanly scoped here. Resume it as a focused, dedicated effort (or an upstream
+contribution) — `analyze/pass/loopify_tail.cpp`, steps 1–3 above, gated by the existing red test.
