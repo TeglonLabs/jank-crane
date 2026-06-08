@@ -86,6 +86,13 @@ typed **`HUGEINT` (128-bit exact)** — the SQL-level F2-safe discipline. `model
 The jank side closes the loop: a jank nREPL driving DuckDB via cpp-interop (or the CLI) = a live clearing
 REPL whose audit trail is a queryable, exact, append-only ledger.
 
+## Transients validated on real jank (the convergence primitive)
+`model/transient.jank` on the binary: `transient`/`assoc!`/`conj!`/`persistent!` correct, and
+`transient == persistent` over 50 entries = **true**. I.e. the transient batch yields exactly the
+persistent result, just faster — the `use_count()==1` no-spread region (η iso when uniquely owned),
+confirmed on actual jank. So the ewig-clearing FAST PATH (transient netting) is binary-validated, not
+just modeled — alongside the conservation + DuckDB-ledger validations above.
+
 ## Honest status
 - **Real now**: the architecture (ewig pattern is proven; immer transients are real; rung5 netting exists
   in Julia; the transient-lifecycle = clearing-round mapping is sound).

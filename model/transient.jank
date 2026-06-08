@@ -1,0 +1,15 @@
+;; validate jank transients (the convergence primitive) on the real binary.
+;; transient map
+(let [t (transient {})
+      t (assoc! t :a 1)
+      t (assoc! t :b 2)
+      t (assoc! t :a 9)
+      m (persistent! t)]
+  (println "map:" (get m :a) (get m :b) "count" (count m)))
+;; transient vector
+(let [v (persistent! (conj! (conj! (conj! (transient []) 10) 20) 30))]
+  (println "vec:" v "count" (count v) "nth1" (nth v 1)))
+;; transient == persistent equivalence (the convergence claim): build same map both ways
+(let [tw (persistent! (reduce (fn [t i] (assoc! t i (* i i))) (transient {}) (range 50)))
+      pw (reduce (fn [m i] (assoc m i (* i i))) {} (range 50))]
+  (println "transient==persistent over 50:" (= tw pw)))
