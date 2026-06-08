@@ -26,9 +26,24 @@ scaffold; the scaffold is default-off and not implicated). Run via `jank run FIL
 ```
 - `*` and small-int accumulation **truncate to 32 bits**, while i64 literals and literal-i64 `+` are fine.
   Clojure longs are i64 (`(* 100000 100000)` = 10000000000). **Silent wrong answer** — worse than a crash.
-- **Distinct from #792** (that's `bigint "42N"` parse behavior). Not matched by #620/#311/#634.
-  Appears unreported. Root cause unknown (codegen of `*`/`range`/loop accumulator at i32?) — reported
-  as observed behavior + minimal repro, for maintainers to diagnose.
+### ROOT CAUSE (hardened — confirmed via `type`)
+jank has two integer types, `small_integer` (signed **i32**) and `integer` (**i64**). Literals are typed
+by magnitude; **`small_integer` arithmetic wraps at signed 32 bits and never promotes to `integer`.**
+```clojure
+(type 100000)             ; => small_integer        (literal ≤ i32)
+(type 5000050000)         ; => integer              (bigger literal)
+(type (* 100000 100000))  ; => small_integer        (product stays i32 — no promotion)
+(* 100000 100000)         ; => 1410065408           (want 10000000000)
+(* 1000000 1000000)       ; => -727379968           (want 10^12   — SIGN FLIP)
+(* 2147483647 2)          ; => -2                   (want 4294967294)
+(+ 2000000000 2000000000) ; => -294967296           (want 4000000000 — SIGN FLIP)
+(+ 5000050000 0)          ; => 5000050000           (i64 path, correct)
+```
+Ordinary expressions like `(* 1000000 1000000)` silently produce wrong, often **negative**, results.
+Clojure has no i32/i64 split (all Long/i64), so all of these are correct there.
+- **Distinct from #792** (that's `bigint "42N"` parse behavior). Not matched by #620/#311/#634. Unreported.
+- The fix space is clear: either promote `small_integer`→`integer` on overflow (Clojure-like), or make
+  the arithmetic ops always i64 (drop the i32 fast path). A maintainer can pick; the repro pins the cause.
 
 ## Finding 3 — lexer rejects non-ASCII in a comment (minor, lower confidence)
 ```clojure
