@@ -14,3 +14,4 @@ q     = "?     orchestrator / GF(3) witness   (Witness 0)"
 [comparisons]
 crane_dafny = "Bloomberg/Crane vs Dafny verification and backend approaches"
 coqgym_place = "Princeton CoqGym as proof-search/data layer upstream of Crane"
+jank_duckdb_repl = "jank REPL outer loop for DuckDB primitives, errors, IR, and live development"
