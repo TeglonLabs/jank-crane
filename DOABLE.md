@@ -15,6 +15,15 @@ Tiers by actual reachability. Everything in tier 1 was just executed and passed.
 | jank binary (fork + loopify scaffold) | `jank -Oloopify run …` | runs; `-Oloopify` switchable, verified no-op |
 | CoqGym language / SCIP query | `gh api …/languages` | answered (`coqgym-scip.md`) |
 
+### Reproducibility note (caught by a re-run sweep, 2026-06-08)
+The jank-dependent rows need the built binary. The earlier `nix build … --no-link` builds left **no GC
+root** and were garbage-collected (binary vanished; bb/Nickel/DuckDB rows unaffected). Fix: build with a
+GC root so it persists —
+```
+cd vendor/jank && nix build .#jank-release -L --out-link /Users/dietrich/worlds/jc-converge/.jank-result
+# then: JANK=.jank-result/bin/jank ; jank artifacts (clearing_repl, transient, duckjank, -Oloopify) re-run.
+```
+
 ## Tier 2 — DOABLE, ONE DECISION (yours)
 - **File F2 (and F1/F3) upstream.** `gh` authed as `bmorphism`, scopes `repo`+`workflow` → can open issues
   on `jank-lang/jank`. Drafts ready in `upstream-issue-draft.md`. Just needs your go.
