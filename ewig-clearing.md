@@ -73,6 +73,19 @@ Two facts, both observed on the actual binary:
    (a) sharpens why F2 matters here and (b) is a real design lesson: audit per-position, not just Σ.
    (Also re-confirmed Finding 3 live: a `Σ` in a source comment crashed the lexer — ASCII comments only.)
 
+## Persistent ledger in DuckDB (realizes world.toml `jank_duckdb_repl`)
+The ewig snapshot history (free, structural-sharing in memory) persists to a DuckDB table with `net`
+typed **`HUGEINT` (128-bit exact)** — the SQL-level F2-safe discipline. `model/clearing_ledger.{clj,sql}`
+(runnable: `bb model/clearing_ledger.clj`) does, in SQL:
+- **conservation (necessary):** `SUM(net)=0` per epoch — all conserved.
+- **time-travel (ewig history):** `SUM(net) OVER (PARTITION BY party ORDER BY epoch)` = per-party running
+  balance across epochs, replayable.
+- **★ SUFFICIENT audit:** `MAX(ABS(net)) > 2147483647` — the per-position check the global Σ misses;
+  on the demo it returns max|net| = 9,000,000,000 ⇒ `exceeds_i32 = true`, i.e. this ledger **would be
+  corrupted by jank `small_integer`** ⇒ `HUGEINT` is mandatory. DuckDB makes exact-arithmetic a column type.
+The jank side closes the loop: a jank nREPL driving DuckDB via cpp-interop (or the CLI) = a live clearing
+REPL whose audit trail is a queryable, exact, append-only ledger.
+
 ## Honest status
 - **Real now**: the architecture (ewig pattern is proven; immer transients are real; rung5 netting exists
   in Julia; the transient-lifecycle = clearing-round mapping is sound).
