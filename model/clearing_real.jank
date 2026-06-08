@@ -1,0 +1,29 @@
+;; ewig-clearing round on real jank. Party 0 is owed 3 x 2,000,000,000 (net +6e9, over i32 max).
+;; Two ways: bigint (exact) vs default small_integer (i32). The global sum stays 0 BOTH ways
+;; (each amt added once, subtracted once), so the cheap audit does NOT catch the per-position
+;; wrap. Only exact arithmetic yields the correct settlement for party 0.
+
+(defn net-big [os]
+  (reduce (fn [m o]
+            (let [m (assoc m (:from o) (- (get m (:from o) 0N) (:big o)))]
+              (assoc m (:to o) (+ (get m (:to o) 0N) (:big o)))))
+          {} os))
+
+(defn net-small [os]
+  (reduce (fn [m o]
+            (let [m (assoc m (:from o) (- (get m (:from o) 0) (:sml o)))]
+              (assoc m (:to o) (+ (get m (:to o) 0) (:sml o)))))
+          {} os))
+
+(def obs
+  [{:from 1 :to 0 :big 2000000000N :sml 2000000000}
+   {:from 2 :to 0 :big 2000000000N :sml 2000000000}
+   {:from 3 :to 0 :big 2000000000N :sml 2000000000}])
+
+(let [nb (net-big obs)
+      ns (net-small obs)]
+  (println "bigint    net(0) =" (get nb 0) " sum =" (reduce + 0N (vals nb)))
+  (println "smallint  net(0) =" (get ns 0) " sum =" (reduce + 0 (vals ns)))
+  (println "bigint correct (== 6000000000)? " (= (get nb 0) 6000000000N))
+  (println "smallint audit FOOLED (sum=0 yet net(0) wrong)? "
+           (and (zero? (reduce + 0 (vals ns))) (not (= (get ns 0) 6000000000)))))

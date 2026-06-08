@@ -57,6 +57,22 @@ this on jank's default integers until F2 is fixed** (or you force `big_integer`/
 as rung5 does with `Rational{Int}`). rung5's "exact rational, no float drift" discipline is non-negotiable
 here. ⇒ **F2 isn't just a bug to file — it's the gating dependency for the ewig-clearing goal.**
 
+## Validated on the real jank binary (2026-06-08)
+A clearing round where party 0 is owed 3 × 2,000,000,000 (net +6e9, over i32 max), run on the built jank:
+```
+bigint    net(0) = 6000000000   sum = 0     ; correct settlement (exact arithmetic, F2-safe)
+smallint  net(0) = 1705032704   sum = 0     ; WRONG (6e9 wrapped to i32), yet sum still 0
+```
+Two facts, both observed on the actual binary:
+1. **bigint clearing works on jank today** — the ewig-clearing round computes correct settlements with
+   `N`/`big_integer` arithmetic. The engine is buildable on jank now.
+2. **★ Conservation (Σ=0) is necessary but NOT sufficient.** The `small_integer` i32 wrap is *symmetric*
+   (each amount added once, subtracted once), so the cheap global audit "do the books balance?" **passes
+   (sum=0) while an individual settlement is silently corrupted by $4.3B.** ⇒ a clearing engine must use
+   exact per-position arithmetic AND cannot rely on the global-sum check to catch width bugs. This both
+   (a) sharpens why F2 matters here and (b) is a real design lesson: audit per-position, not just Σ.
+   (Also re-confirmed Finding 3 live: a `Σ` in a source comment crashed the lexer — ASCII comments only.)
+
 ## Honest status
 - **Real now**: the architecture (ewig pattern is proven; immer transients are real; rung5 netting exists
   in Julia; the transient-lifecycle = clearing-round mapping is sound).
