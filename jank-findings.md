@@ -56,6 +56,19 @@ Clojure has no i32/i64 split (all Long/i64), so all of these are correct there.
   comment-skip reads bytes and mis-handles the high bytes (reports an "Unfinished character" literal).
   Comments must be opaque to end-of-line. Likely related to #634 ("[clojure-test-suite] Lexer issues").
 
+## Finding 4 — string `count`/index is UTF-8 BYTES, not chars (CONFIRMED)
+```clojure
+(count "abc")   ; => 3   (ASCII, matches Clojure)
+(count "é")     ; => 2   (Clojure: 1 ; é = U+00E9 = 2 UTF-8 bytes)
+(count "—")     ; => 3   (Clojure: 1 ; em-dash = 3 bytes)
+(count "café")  ; => 5   (Clojure: 4)
+(subs "café" 0 3) ; => "caf"  (byte indexing)
+```
+jank's string length/indexing operates on UTF-8 **bytes**, not Unicode code points; Clojure strings are
+UTF-16 char sequences (`(count "café")`=4). Silent wrong length/slices for any non-ASCII string.
+**Likely the same root as F3** (jank's string model is byte-oriented, not codepoint-oriented) — F3 is the
+lexer face, F4 the runtime face. Moderate severity; file together as "Unicode/codepoint string semantics".
+
 ## Counterfactual audit (−1: steelman "not a bug", then test)
 
 **F1 — "native languages segfault on stack overflow; this is expected, not a bug." → COUNTERFACTUAL
