@@ -21,7 +21,9 @@ GF(3) spine: **+1 jank (Play)** · **−1 crane (Coplay)** · **0 witness (this 
 - [`model/loopify_model.clj`](model/loopify_model.clj) — **runnable** operational model: property-diff `interp == loopify`
   over 300 reproducible cases + observed red/green. `bb model/loopify_model.clj` → ACCEPT.
 - Scaffold lives in `vendor/jank` (branch `loopify-pass`): `ir/opt/loopify.{hpp,cpp}`, default-off behind
-  `--loopify`. **Compiles into real jank** (built via the flake). Transform body still a skeleton.
+  `-Oloopify`. **Compiles into real jank** and the flag is **verified switchable** (`-Oloopify` accepted,
+  `-Obogus` rejected) and a **verified no-op** (deep recursion segfaults identically with/without it —
+  spec-L3 identity holds on the binary). Transform body still a skeleton.
 
 **3 · Rigor (Tweag + simonw, made load-bearing)**
 - [`model/loopify.ncl`](model/loopify.ncl) — typed config with a contract that *rejects* bad input ([`model/bad.ncl`](model/bad.ncl) → exit 1).
