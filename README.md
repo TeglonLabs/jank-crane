@@ -37,7 +37,9 @@ GF(3) spine: **+1 jank (Play)** · **−1 crane (Coplay)** · **0 witness (this 
 - **F1** — non-tail recursion SIGSEGVs ~500–800 deep. Counterfactual *holds*: expected native behavior, **not a bug**;
   loopify reframed as an enhancement (#98).
 - **F3** — lexer chokes on valid UTF-8 in a comment (`e2 80 94`). Real, minor.
-- Verdict after the −1 pass: **one strong bug (F2) + one minor (F3) + one enhancement (loopify)**, not "three bugs".
+- **F4** — string `count`/index is UTF-8 **bytes**, not chars (`(count "café")`→5 vs Clojure 4). Same root as
+  F3 (byte-oriented string model) ⇒ file together as one "Unicode/codepoint semantics" issue.
+- Verdict after the −1 pass: **F2 (severe) + F3/F4 (Unicode, one issue) + loopify-as-enhancement**, not "four bugs".
 
 **5 · ewig-clearing (the application)** — transients as the fast-clearing primitive ([`ewig-clearing.md`](ewig-clearing.md)).
 - [`model/clearing_model.clj`](model/clearing_model.clj) — **runnable**: transient-batch netting, WCC clearing groups,
@@ -51,9 +53,22 @@ GF(3) spine: **+1 jank (Play)** · **−1 crane (Coplay)** · **0 witness (this 
 - [`steel-geiser-emacs.md`](steel-geiser-emacs.md) — the −/?/+ REPL tiles (jank nREPL / Steel geiser / Gay.jl witness), Emacs-resident.
 - [`gay-3stream-color.md`](gay-3stream-color.md) — drand(continue) ⊕ photon(fork) ⊕ open: the 3-stream color game.
 
+**7 · Deepenings & audits (each grounded by running, or by real code)**
+- [`crane-extraction-concrete.md`](crane-extraction-concrete.md) — ★ crane golden file: extraction is **"loopify everywhere"**
+  (iterative `~dtor`/`clone`/`loopify`), forced by RC; the ⟨reclaim⟩ axis predicts F1. Unifies loopify + F1 + rc/gc.
+- [`symbolic-c2.md`](symbolic-c2.md) — CoqGym-AST ↔ jank-IR (homoiconic IR = the Bitter Lesson the TF/JAX family re-derives as
+  MLIR); fastmath; **ℂ² keystone** — `S³⊂ℂ²` contact manifold, Reeb=Hopf ([`model/hopf_c2.clj`](model/hopf_c2.clj) → ACCEPT).
+- [`coqgym-place.md`](coqgym-place.md) + [`coqgym-scip.md`](coqgym-scip.md) — proof-acquisition layer; **95.8% SCIP-dark** (Coq/OCaml), self-indexed via SerAPI.
+- [`opam-dune-counterfactual.md`](opam-dune-counterfactual.md) — opam-vs-dune is a false rivalry; the real one is **opam-vs-nix** (build crane via `rocq-core_9_0`).
+- [`crane-users.md`](crane-users.md) — all users of crane (joom's verified games; CharlesCNorton; forks incl. ours + `plurigrid/u-crane`).
+- [`DOABLE.md`](DOABLE.md) — capability audit, verified by running: doable-now / one-yes / large-effort / blocked.
+- jank transients validated on the binary (`model/transient.jank`: `transient == persistent` = true).
+
 ## Reproduce
 ```
 bb model/loopify_model.clj      # IR pass semantics: property-diff + red/green → ACCEPT
+bb model/clearing_model.clj     # clearing conservation over 500 systems → ACCEPT
+bb model/hopf_c2.clj            # C^2 / S^3 contact manifold, Reeb=Hopf → ACCEPT
 bb model/clearing_model.clj     # clearing conservation over 500 systems → ACCEPT
 nickel export --format json model/loopify.ncl   # typed config; model/bad.ncl fails the contract
 nix build .#jank-release        # (in vendor/jank) builds jank incl. the loopify scaffold
@@ -67,6 +82,9 @@ nix build .#jank-release        # (in vendor/jank) builds jank incl. the loopify
   jank → cpp-interop → exact `HUGEINT` DuckDB ledger, conservation + per-position audit in SQL, live on the binary.
 
 ## Status, honest
-Done & green: the convergence map, the two operational models, the rigor stack, the real-jank build + bug
-hunt (counterfactual-audited), the ewig-clearing validation. Pending: the loopify transform body (skeleton);
-the `--loopify` CLI registration; the immer→crane seam; filing F2 (user-gated, `bmorphism`).
+Done & green: the convergence map; three operational models (loopify/clearing/ℂ²); the rigor stack; the
+real-jank build + bug hunt (counterfactual-audited, F1–F4); the **complete loopify scaffold** (`-Oloopify`
+verified switchable + no-op on the binary); the **live jank→DuckDB clearing engine**; transients validated;
+all three `world.toml` threads; crane's user base.
+Pending — all bounded: the loopify transform *body* ([`loopify-transform-plan.md`](loopify-transform-plan.md), analyze-layer, a deliberate
+effort); the verified corner (`flox install rocq-core_9_0` → `dune build`); filing F2/F3/F4 (user-gated, `bmorphism`).
