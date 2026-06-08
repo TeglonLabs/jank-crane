@@ -1,0 +1,6 @@
+# build artifacts — never commit (simonw: don't push generated binaries)
+post_money_clearing_engine
+*.o
+*.out
+target/
+# vendor/ holds submodule gitlinks → TeglonLabs/jank, TeglonLabs/crane (tracked via .gitmodules)

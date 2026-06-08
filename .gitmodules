@@ -1,0 +1,6 @@
+[submodule "vendor/crane"]
+	path = vendor/crane
+	url = https://github.com/TeglonLabs/crane.git
+[submodule "vendor/jank"]
+	path = vendor/jank
+	url = https://github.com/TeglonLabs/jank.git
