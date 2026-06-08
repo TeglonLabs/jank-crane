@@ -1,0 +1,26 @@
+name: loopify-model
+# Tweag (hermetic Nix env) + simonw (run the tests on every push). CI enforces all
+# claims continuously: typed-config export, the load-bearing contract, and red/green.
+on: [push, pull_request, workflow_dispatch]
+jobs:
+  model:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v27
+        with:
+          extra_nix_config: "experimental-features = nix-command flakes"
+
+      - name: typed config -> json (Nickel contract-checked)
+        run: nix shell nixpkgs#nickel -c nickel export --format json model/loopify.ncl > model/loopify_params.json
+
+      - name: contract is load-bearing (bad config MUST fail)
+        run: |
+          if nix shell nixpkgs#nickel -c nickel export --format json model/bad.ncl > /dev/null 2>&1; then
+            echo "FAIL: bad.ncl exported but should violate safe_n < stack_limit"; exit 1
+          else
+            echo "OK: Nickel contract rejected the bad config"
+          fi
+
+      - name: loopify operational model (property diff + observed red/green)
+        run: nix shell nixpkgs#babashka -c bb model/loopify_model.clj

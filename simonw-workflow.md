@@ -60,6 +60,35 @@ Concretely, next iteration (advances BOTH loops):
 3. Sketch the differential property harness (`f` vs `loopify(f)`) as the executable form of L5.
 4. Reduce the +/−/? roots' next run to emit a **patch**, not a map (#8).
 
+## ITER 2 — self-grade against the actual pattern essays (Subagents, Red/green TDD)
+
+Read the full pattern pages, not just the index. Graded what we shipped.
+
+**Subagents** — simonw: spawn to avoid "burn[ing] through too much of the coding agent's valuable
+top-level context"; each gets a fresh window, returns a concise summary; parallel works best "where
+those files are not dependent on each other"; but *"your root coding agent is perfectly capable of
+debugging or reviewing its own output provided it has the tokens to spare."*
+- ✅ +/− roots: fresh windows, concise returns, wrote independent files (plus.md/minus.md). Aligned.
+- ⚠️ the `−` root re-emitted 3× — the over-delegation he warns against. Wasted context.
+- ✅ doing the loopify scaffold at root (no subagent) this turn was the correct call by his rule.
+
+**Red/green TDD** — simonw, emphatic: *"confirm that the tests fail before implementing the code to
+make them pass."* The red phase must be OBSERVED by running, not assumed; else you risk tests that
+already pass (or, here, a red you never witnessed).
+- ❌ **We broke the central rule.** `test/jank/loopify/deep-non-tail-recursion.jank` was DECLARED red
+  ("fails until implemented by design") but never built+run to watch it overflow. Red-by-assertion,
+  not red-by-observation.
+- ❌ **"First run the tests"** never done — no baseline of jank's existing suite at all (flag off OR on).
+- ✅ the skeleton can't game the test (returns identity); the differential `f == loopify(f)` guard is
+  specified — but not yet written/runnable.
+
+**Corrective (the real next step — NOT more code):**
+1. Build the `TeglonLabs/jank` fork (needs Clang 19 / LLVM toolchain — the gating dependency).
+2. `jank --loopify run deep-non-tail-recursion.jank` → CONFIRM it overflows today (witness the red).
+3. Baseline `test/bash/clojure-test-suite` green with `--loopify` OFF and ON (non-cascade, observed).
+Only after red is witnessed does implementing the transform to green mean anything. Until the build
+env exists, the loopify scaffold sits in exactly the state simonw cautions against.
+
 ## Sources
 - https://simonwillison.net/guides/agentic-engineering-patterns/
 - https://simonwillison.net/2026/Feb/23/agentic-engineering-patterns/
