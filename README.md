@@ -59,10 +59,12 @@ nickel export --format json model/loopify.ncl   # typed config; model/bad.ncl fa
 nix build .#jank-release        # (in vendor/jank) builds jank incl. the loopify scaffold
 ```
 
-## Open threads (`world.toml [comparisons]`)
-- `crane_dafny` — verification/backend approaches (drafted in roots/crane-vs-dafny.md).
-- `coqgym_place` — Princeton CoqGym as a proof-search/data layer upstream of crane.
-- `jank_duckdb_repl` — jank REPL outer loop over DuckDB primitives/IR.
+## `world.toml [comparisons]` threads — all addressed
+- `crane_dafny` — ✅ drafted ([`roots/crane-vs-dafny.md`](roots/crane-vs-dafny.md)): the ⟨reclaim×boxing×proof⟩ cube.
+- `coqgym_place` — ✅ placed ([`coqgym-place.md`](coqgym-place.md)): proof-acquisition layer upstream of crane
+  (+1 prove / 0 kernel-check / −1 extract); how the clearing conservation proof would be *found*.
+- `jank_duckdb_repl` — ✅ **WORKING** ([`jank-duckdb-repl.md`](jank-duckdb-repl.md), [`model/clearing_repl.jank`](model/clearing_repl.jank)):
+  jank → cpp-interop → exact `HUGEINT` DuckDB ledger, conservation + per-position audit in SQL, live on the binary.
 
 ## Status, honest
 Done & green: the convergence map, the two operational models, the rigor stack, the real-jank build + bug
