@@ -1,7 +1,0 @@
-{
-  "deep": 500000,
-  "equivalence_cases": 300,
-  "safe_n": 300,
-  "seed": 1069,
-  "stack_limit": 500
-}
