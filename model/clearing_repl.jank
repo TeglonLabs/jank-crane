@@ -1,0 +1,46 @@
+;; clearing_repl.jank -- live clearing engine: jank clearing round -> DuckDB HUGEINT ledger -> SQL audit.
+;; Run: DYLD_INSERT_LIBRARIES=$FLOX/lib/libduckdb.dylib jank --include-dir $FLOX/include run clearing_repl.jank
+;;      ($FLOX = /Users/dietrich/worlds/.flox/run/aarch64-darwin.worlds.dev)
+
+(cpp/raw "
+#include <duckdb.h>
+#include <cstdio>
+namespace cj {
+  static duckdb_database db = nullptr;
+  static duckdb_connection con = nullptr;
+  void open() {
+    duckdb_open(nullptr, &db);
+    duckdb_connect(db, &con);
+    duckdb_query(con, \"CREATE TABLE ledger(epoch BIGINT, party BIGINT, net HUGEINT);\", nullptr);
+  }
+  void insert(long epoch, long party, long net) {
+    char sql[256];
+    snprintf(sql, sizeof(sql), \"INSERT INTO ledger VALUES (%ld,%ld,%ld);\", epoch, party, net);
+    duckdb_query(con, sql, nullptr);
+  }
+  long q1(const char *sql) {
+    duckdb_result r; duckdb_query(con, sql, &r);
+    long v = duckdb_value_int64(&r, 0, 0); duckdb_destroy_result(&r); return v;
+  }
+  long sigma(long e) {
+    char sql[160]; snprintf(sql, sizeof(sql), \"SELECT CAST(COALESCE(SUM(net),0) AS BIGINT) FROM ledger WHERE epoch=%ld;\", e);
+    return q1(sql);
+  }
+  long max_abs() { return q1(\"SELECT CAST(COALESCE(MAX(ABS(net)),0) AS BIGINT) FROM ledger;\"); }
+}")
+
+;; --- jank clearing round: net positions (exact; amounts > 2^31 are jank `integer` i64, F2-safe) ---
+(defn net-positions [obs]
+  (reduce (fn [m o]
+            (let [m (assoc m (:from o) (- (get m (:from o) 0) (:amt o)))]
+              (assoc m (:to o) (+ (get m (:to o) 0) (:amt o)))))
+          {} obs))
+
+(def epoch1 [{:from 1 :to 0 :amt 3000000000} {:from 2 :to 0 :amt 3000000000} {:from 3 :to 0 :amt 3000000000}])
+
+(cpp/cj.open)
+(doseq [[party net] (net-positions epoch1)]
+  (cpp/cj.insert (cpp/long 1) (cpp/long party) (cpp/long net)))
+
+(println "epoch 1 conservation Sigma(net) =" (cpp/cj.sigma (cpp/long 1)) " (== 0?)" (= 0 (cpp/cj.sigma (cpp/long 1))))
+(println "sufficient audit max|net| =" (cpp/cj.max_abs) " (exceeds i32?)" (> (cpp/cj.max_abs) (cpp/long 2147483647)))
