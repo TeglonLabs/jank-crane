@@ -35,6 +35,25 @@ Both halves are proven on the real jank binary; only the glue (install `libduckd
 This closes the ewig-clearing engine onto a real persistent store, driven live from a Lisp REPL, with
 exact arithmetic enforced at the column type — and per-position auditing that a naive Σ check would miss.
 
-## Status
-Proven: both halves + the interop mechanism. Gated on: `flox install duckdb` (env change — user's call),
-then the `clearing.ledger` jank ns. No blockers beyond that.
+## ★ WORKING end-to-end (2026-06-08)
+jank drives DuckDB live. `model/duckjank.jank` (one `(cpp/raw "#include <duckdb.h> …")` wrapper) →
+opens in-memory DuckDB, builds a `HUGEINT` ledger, runs the per-position audit, returns to jank:
+```
+jank -> DuckDB MAX(ABS(net)) = 9000000000
+exact (== 9000000000, exceeds i32)?  true
+```
+**The working recipe** (the non-obvious part — the JIT needs the lib's symbols *loaded*, not just on -L):
+```
+DYLD_INSERT_LIBRARIES=$FLOX/lib/libduckdb.dylib \
+  jank --include-dir $FLOX/include run model/duckjank.jank
+#   $FLOX = /Users/dietrich/worlds/.flox/run/aarch64-darwin.worlds.dev
+```
+- `flox install duckdb` provides `$FLOX/include/duckdb.h` + `$FLOX/lib/libduckdb.dylib` (done).
+- `--include-dir` lets `#include <duckdb.h>` resolve at JIT-compile.
+- `DYLD_INSERT_LIBRARIES` force-loads the dylib so the ORC JIT resolves `duckdb_open` etc.
+  (`-L`/`--library-dir` and `#pragma cling load` did NOT suffice — symbols-not-found; DYLD_INSERT does.)
+
+## Status — DONE
+Both halves AND the bridge work on the real binary. Next (optional polish): wrap as a jank ns
+`clearing.ledger` (`open!`/`append-epoch!`/`audit`/`time-travel`) and drive it from the nREPL / the −/?/+
+tiles for a live, exact, per-position-audited clearing REPL.

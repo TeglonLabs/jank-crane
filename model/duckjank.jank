@@ -1,0 +1,22 @@
+;; jank -> DuckDB via cpp-interop. Whole C-API dance in one C++ wrapper returning a scalar.
+(cpp/raw "
+#pragma cling load(\"/Users/dietrich/worlds/.flox/run/aarch64-darwin.worlds.dev/lib/libduckdb.dylib\")
+#include <duckdb.h>
+namespace cj {
+  long ledger_max() {
+    duckdb_database db; duckdb_connection con; duckdb_result r;
+    duckdb_open(nullptr, &db);
+    duckdb_connect(db, &con);
+    duckdb_query(con, \"CREATE TABLE ledger(net HUGEINT);\", nullptr);
+    duckdb_query(con, \"INSERT INTO ledger VALUES (9000000000),(-3000000000),(1410065408);\", nullptr);
+    duckdb_query(con, \"SELECT CAST(MAX(ABS(net)) AS BIGINT) FROM ledger;\", &r);
+    long v = duckdb_value_int64(&r, 0, 0);
+    duckdb_destroy_result(&r);
+    duckdb_disconnect(&con);
+    duckdb_close(&db);
+    return v;
+  }
+}")
+(let* [m (cpp/cj.ledger_max)]
+  (println "jank -> DuckDB MAX(ABS(net)) =" m)
+  (println "exact (== 9000000000, exceeds i32)? " (= m 9000000000)))
